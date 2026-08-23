@@ -1,0 +1,1769 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081123">
+  <title>Lumen Run — The Last Light</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #edf6ff;
+      --muted: #a8b8d8;
+      --edge: rgba(150, 194, 255, .2);
+      --panel: rgba(9, 20, 44, .82);
+      --panel-strong: rgba(10, 24, 51, .96);
+      --cyan: #63f6ff;
+      --violet: #a88cff;
+      --amber: #ffd36b;
+      --danger: #ff5f8d;
+      --success: #86ffb0;
+      --shadow: rgba(0, 0, 0, .45);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; background: #060b19; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 16% -10%, rgba(91, 69, 255, .26), transparent 34rem),
+        radial-gradient(circle at 87% 12%, rgba(31, 215, 255, .15), transparent 31rem),
+        linear-gradient(145deg, #050918 0%, #09132b 48%, #060b18 100%);
+    }
+
+    button {
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--cyan);
+      outline-offset: 3px;
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 34px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 0 15px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(99, 246, 255, .55);
+      border-radius: 12px;
+      color: var(--cyan);
+      background: rgba(99, 246, 255, .08);
+      box-shadow: 0 0 22px rgba(99, 246, 255, .15);
+      font-size: 19px;
+    }
+
+    .brand-copy { min-width: 0; }
+
+    .brand-copy p,
+    .brand-copy h1,
+    .modal p,
+    .hud p { margin: 0; }
+
+    .brand-copy p {
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .brand-copy h1 {
+      margin-top: 2px;
+      font-size: clamp(17px, 3vw, 22px);
+      letter-spacing: -.035em;
+    }
+
+    .utility-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .utility-button,
+    .touch-button,
+    .level-button,
+    .modal-button {
+      border: 1px solid var(--edge);
+      border-radius: 11px;
+      background: rgba(22, 39, 78, .64);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .04);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .utility-button:hover,
+    .touch-button:hover,
+    .level-button:not(:disabled):hover,
+    .modal-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(99, 246, 255, .72);
+      background: rgba(35, 63, 113, .78);
+    }
+
+    .utility-button {
+      min-height: 37px;
+      padding: 0 11px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .game-frame {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(133, 181, 255, .26);
+      border-radius: 21px;
+      background: #071126;
+      box-shadow: 0 24px 62px var(--shadow), inset 0 0 0 1px rgba(255, 255, 255, .03);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      touch-action: none;
+    }
+
+    .scanline {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      opacity: .17;
+      mix-blend-mode: soft-light;
+      background-image: linear-gradient(to bottom, rgba(255,255,255,.32) 1px, transparent 1px);
+      background-size: 100% 4px;
+    }
+
+    .screen-shade {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s ease;
+      background: rgba(2, 7, 18, .54);
+    }
+
+    .screen-shade.visible {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .modal {
+      width: min(548px, 100%);
+      max-height: 100%;
+      overflow: auto;
+      padding: clamp(20px, 4vw, 34px);
+      border: 1px solid rgba(145, 204, 255, .28);
+      border-radius: 19px;
+      background: linear-gradient(150deg, rgba(14, 32, 69, .98), rgba(8, 17, 39, .98));
+      box-shadow: 0 28px 60px rgba(0,0,0,.44), 0 0 50px rgba(98, 87, 255, .12);
+    }
+
+    .modal-kicker {
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .modal h2 {
+      margin: 7px 0 9px;
+      font-size: clamp(25px, 5.4vw, 39px);
+      line-height: 1.02;
+      letter-spacing: -.055em;
+    }
+
+    .modal-copy {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.52;
+    }
+
+    .medals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-height: 0;
+      margin-top: 15px;
+    }
+
+    .medal {
+      padding: 6px 8px;
+      border: 1px solid rgba(255, 211, 107, .32);
+      border-radius: 999px;
+      color: #ffe6a8;
+      background: rgba(255, 211, 107, .09);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 20px;
+    }
+
+    .modal-button {
+      min-height: 43px;
+      padding: 0 15px;
+      font-weight: 800;
+    }
+
+    .modal-button.primary {
+      border-color: rgba(99, 246, 255, .72);
+      color: #052033;
+      background: linear-gradient(135deg, #a0fbff, #61d7ff);
+      box-shadow: 0 8px 24px rgba(54, 211, 255, .19);
+    }
+
+    .modal-button.secondary { color: var(--muted); }
+    .modal-button[hidden] { display: none; }
+
+    .level-select {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .level-select[hidden] { display: none; }
+
+    .level-button {
+      min-height: 59px;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .level-button strong {
+      display: block;
+      color: var(--cyan);
+      font-size: 12px;
+    }
+
+    .level-button span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.15;
+    }
+
+    .level-button:disabled {
+      cursor: not-allowed;
+      opacity: .38;
+      filter: saturate(.2);
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(105px, .55fr));
+      gap: 9px;
+      margin-top: 13px;
+    }
+
+    .hud-card {
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid rgba(133, 181, 255, .16);
+      border-radius: 13px;
+      background: rgba(8, 19, 43, .7);
+      box-shadow: inset 0 1px rgba(255,255,255,.025);
+    }
+
+    .hud-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .hud-value {
+      overflow: hidden;
+      margin-top: 3px;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hud-objective {
+      margin-top: 3px !important;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .light-pips {
+      display: flex;
+      gap: 5px;
+      margin-top: 7px;
+    }
+
+    .pip {
+      width: 12px;
+      height: 12px;
+      border: 1px solid rgba(99, 246, 255, .45);
+      border-radius: 50%;
+      background: rgba(99, 246, 255, .13);
+      box-shadow: 0 0 8px rgba(99, 246, 255, .12);
+    }
+
+    .pip.off {
+      border-color: rgba(255,255,255,.13);
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .dash-meter {
+      height: 7px;
+      overflow: hidden;
+      margin-top: 8px;
+      border-radius: 99px;
+      background: rgba(255,255,255,.09);
+    }
+
+    .dash-meter i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--violet), var(--cyan));
+      box-shadow: 0 0 12px rgba(99,246,255,.4);
+      transition: width .1s linear;
+    }
+
+    .touch-controls {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 14px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(2, 44px);
+      gap: 5px;
+    }
+
+    .touch-button {
+      min-width: 44px;
+      min-height: 42px;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+      touch-action: none;
+    }
+
+    .touch-button[data-control="up"] { grid-column: 2; grid-row: 1; }
+    .touch-button[data-control="left"] { grid-column: 1; grid-row: 2; }
+    .touch-button[data-control="down"] { grid-column: 2; grid-row: 2; }
+    .touch-button[data-control="right"] { grid-column: 3; grid-row: 2; }
+
+    .touch-button.dash {
+      min-width: 145px;
+      color: #071427;
+      border-color: rgba(99, 246, 255, .72);
+      background: linear-gradient(135deg, #9efbff, #58cdfc);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .controls-note {
+      margin: 16px 0 0;
+      color: rgba(191, 210, 244, .7);
+      font-size: 11px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .controls-note kbd {
+      padding: 1px 4px;
+      border: 1px solid rgba(196, 218, 255, .23);
+      border-radius: 4px;
+      color: var(--ink);
+      background: rgba(255,255,255,.07);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    body.high-contrast {
+      --ink: #ffffff;
+      --muted: #e3edff;
+      --edge: rgba(255, 255, 255, .7);
+      --panel: #101c3f;
+      --panel-strong: #0d1734;
+    }
+
+    body.high-contrast .scanline { display: none; }
+    body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
+
+    @media (max-width: 700px) {
+      .shell { width: min(100% - 18px, 1120px); padding-top: 14px; }
+      .topbar { align-items: flex-start; }
+      .utility-buttons { gap: 5px; }
+      .utility-button { padding: 0 8px; font-size: 10px; }
+      .game-frame { border-radius: 15px; }
+      .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hud-card:first-child { grid-column: 1 / -1; }
+      .hud-objective { white-space: normal; }
+      .modal { border-radius: 16px; }
+    }
+
+    @media (max-width: 420px) {
+      .brand-mark { width: 34px; height: 34px; }
+      .brand-copy p { font-size: 9px; }
+      .utility-buttons { max-width: 165px; }
+      .utility-button { min-height: 31px; }
+      .touch-button.dash { min-width: 117px; }
+      .dpad { grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(2, 40px); }
+    }
+
+    @media (pointer: fine) and (min-width: 760px) {
+      .touch-controls { opacity: .58; }
+      .touch-controls:hover, .touch-controls:focus-within { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Lumen Run: The Last Light">
+        <div class="brand-mark" aria-hidden="true">✦</div>
+        <div class="brand-copy">
+          <p>Arcade expedition</p>
+          <h1>Lumen Run: The Last Light</h1>
+        </div>
+      </div>
+      <div class="utility-buttons" aria-label="Game settings">
+        <button class="utility-button" id="soundButton" type="button" aria-pressed="false">Sound: On</button>
+        <button class="utility-button" id="motionButton" type="button" aria-pressed="false">Motion: Full</button>
+        <button class="utility-button" id="contrastButton" type="button" aria-pressed="false">Contrast: Standard</button>
+      </div>
+    </header>
+
+    <section class="game-frame" aria-label="Game area">
+      <canvas id="game" width="960" height="540" tabindex="0" aria-label="Lumen Run playable game area"></canvas>
+      <div class="scanline" aria-hidden="true"></div>
+      <div class="screen-shade visible" id="screenShade" aria-live="polite">
+        <section class="modal" aria-labelledby="modalTitle">
+          <p class="modal-kicker" id="modalKicker">A six-stage light expedition</p>
+          <h2 id="modalTitle">The vault has gone dark.</h2>
+          <p class="modal-copy" id="modalCopy">Collect every shard, outpace the security grid, and bring the last light home.</p>
+          <div class="medals" id="medals" hidden></div>
+          <div class="modal-actions">
+            <button class="modal-button primary" id="primaryAction" type="button">Begin expedition</button>
+            <button class="modal-button secondary" id="secondaryAction" type="button" hidden>Back</button>
+          </div>
+          <div class="level-select" id="levelSelect" aria-label="Choose an unlocked stage"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="hud" aria-label="Game status">
+      <div class="hud-card">
+        <p class="hud-label" id="stageLabel">Stage 1 of 6</p>
+        <p class="hud-value" id="stageName">Wake-Up Chamber</p>
+        <p class="hud-objective" id="objectiveText">Collect light shards, then reach the portal.</p>
+      </div>
+      <div class="hud-card">
+        <p class="hud-label">Shards</p>
+        <p class="hud-value" id="shardText">0 / 0</p>
+      </div>
+      <div class="hud-card">
+        <p class="hud-label">Light</p>
+        <div class="light-pips" id="lightPips" aria-label="Three light charges"></div>
+      </div>
+      <div class="hud-card">
+        <p class="hud-label">Dash <span id="timeText">0:00.0</span></p>
+        <div class="dash-meter" aria-label="Dash recharge"><i id="dashFill"></i></div>
+      </div>
+    </section>
+
+    <section class="touch-controls" aria-label="Touch controls">
+      <div class="dpad" aria-label="Movement pad">
+        <button class="touch-button" data-control="up" type="button" aria-label="Move up">▲</button>
+        <button class="touch-button" data-control="left" type="button" aria-label="Move left">◀</button>
+        <button class="touch-button" data-control="down" type="button" aria-label="Move down">▼</button>
+        <button class="touch-button" data-control="right" type="button" aria-label="Move right">▶</button>
+      </div>
+      <button class="touch-button dash" data-control="dash" type="button">Dash ✦</button>
+    </section>
+
+    <p class="controls-note">Move with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys · Dash with <kbd>Space</kbd>, <kbd>Shift</kbd>, or <kbd>X</kbd> · Pause with <kbd>P</kbd>/<kbd>Esc</kbd> · Restart with <kbd>R</kbd></p>
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const LOGICAL_WIDTH = 960;
+    const LOGICAL_HEIGHT = 540;
+    const TILE = 60;
+    const COLS = 16;
+    const ROWS = 9;
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const screenShade = document.getElementById('screenShade');
+    const modalKicker = document.getElementById('modalKicker');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalCopy = document.getElementById('modalCopy');
+    const primaryAction = document.getElementById('primaryAction');
+    const secondaryAction = document.getElementById('secondaryAction');
+    const levelSelect = document.getElementById('levelSelect');
+    const medals = document.getElementById('medals');
+    const stageLabel = document.getElementById('stageLabel');
+    const stageName = document.getElementById('stageName');
+    const objectiveText = document.getElementById('objectiveText');
+    const shardText = document.getElementById('shardText');
+    const lightPips = document.getElementById('lightPips');
+    const timeText = document.getElementById('timeText');
+    const dashFill = document.getElementById('dashFill');
+    const soundButton = document.getElementById('soundButton');
+    const motionButton = document.getElementById('motionButton');
+    const contrastButton = document.getElementById('contrastButton');
+
+    const normalTheme = {
+      skyTop: '#07152e', skyBottom: '#040916', nebula: '#563cbc', stars: '#d6f9ff',
+      floor: '#0d2143', floorLine: '#173865', wall: '#172c56', wallEdge: '#4d83c6',
+      wallShade: '#091630', cyan: '#63f6ff', violet: '#a88cff', amber: '#ffd36b',
+      danger: '#ff5f8d', dangerDark: '#6c2547', green: '#86ffb0', text: '#eff8ff',
+      muted: '#b0c3e4', portal: '#b89bff', black: '#020712'
+    };
+
+    const highContrastTheme = {
+      skyTop: '#071746', skyBottom: '#00020b', nebula: '#6118c7', stars: '#ffffff',
+      floor: '#081f5a', floorLine: '#5eb6ff', wall: '#1b285c', wallEdge: '#ffffff',
+      wallShade: '#000928', cyan: '#00ffff', violet: '#cf7cff', amber: '#ffff00',
+      danger: '#ff3478', dangerDark: '#7b0030', green: '#5cff6a', text: '#ffffff',
+      muted: '#e3edff', portal: '#e5b8ff', black: '#000000'
+    };
+
+    const levels = [
+      {
+        name: 'Wake-Up Chamber',
+        subtitle: 'Move, collect, and awaken the first gate.',
+        par: 32,
+        map: [
+          '################',
+          '#@...S........E#',
+          '#.#####.######.#',
+          '#....#....#....#',
+          '#.##.#.##.#.##.#',
+          '#S...#....#S...#',
+          '#.######.####..#',
+          '#S.............#',
+          '################'
+        ],
+        sentries: []
+      },
+      {
+        name: 'The Turning Hall',
+        subtitle: 'Touch the amber switch, then sprint through its gate.',
+        par: 39,
+        map: [
+          '################',
+          '#@....#....G..E#',
+          '#.##.#.####.#..#',
+          '#..#.#....#.#..#',
+          '##.#.####.#.#..#',
+          '#S.#....W.#.S..#',
+          '#.######.#####.#',
+          '#S.............#',
+          '################'
+        ],
+        sentries: []
+      },
+      {
+        name: 'Redline Circuit',
+        subtitle: 'Read the pulsing beams. Dash only when the path opens.',
+        par: 48,
+        map: [
+          '################',
+          '#@...S...#..E..#',
+          '#.#####.#.###L.#',
+          '#...#...#...#..#',
+          '###.#.#####.#.##',
+          '#S..#...L...#S.#',
+          '#.######.#####.#',
+          '#..............#',
+          '################'
+        ],
+        sentries: []
+      },
+      {
+        name: 'Watchtower Maze',
+        subtitle: 'Avoid sentry vision, or dash through before it locks on.',
+        par: 54,
+        map: [
+          '################',
+          '#@....#...S...E#',
+          '#.##.#.#####...#',
+          '#..#.#...#.....#',
+          '##.#.###.#.##..#',
+          '#S.#...#.#..S..#',
+          '#.###.#.####...#',
+          '#.......C......#',
+          '################'
+        ],
+        sentries: [
+          { a: [8.5, 3.5], b: [12.4, 3.5], speed: .14, offset: .08 },
+          { a: [4.6, 7.4], b: [8.4, 7.4], speed: .19, offset: .48 }
+        ]
+      },
+      {
+        name: 'Mirror Core',
+        subtitle: 'A switch cools the beams and opens a narrow route.',
+        par: 61,
+        map: [
+          '################',
+          '#@..S....#...GE#',
+          '#.######.#.#####',
+          '#....#...#....##',
+          '#.##.#.###.##.##',
+          '#S...#W..L...S.#',
+          '#.#######.######',
+          '#C.............#',
+          '################'
+        ],
+        sentries: [
+          { a: [7.5, 3.5], b: [10.5, 3.5], speed: .16, offset: .23 }
+        ]
+      },
+      {
+        name: 'The Last Light',
+        subtitle: 'Everything the vault has left. Bring its heart home.',
+        par: 73,
+        map: [
+          '################',
+          '#@...S..#...G.E#',
+          '#.#####.#.###.##',
+          '#...#...L...#.##',
+          '###.#.#####.#.##',
+          '#S..#W..L.#.#S.#',
+          '#.########.#.###',
+          '#C.............#',
+          '################'
+        ],
+        sentries: [
+          { a: [4.5, 3.5], b: [7.6, 3.5], speed: .18, offset: .15 },
+          { a: [10.5, 5.4], b: [12.5, 5.4], speed: .24, offset: .66 }
+        ]
+      }
+    ];
+
+    const stars = Array.from({ length: 118 }, (_, index) => ({
+      x: (index * 79.31) % LOGICAL_WIDTH,
+      y: (index * 47.77) % LOGICAL_HEIGHT,
+      size: 0.35 + ((index * 13) % 8) / 10,
+      phase: index * .81,
+      drift: 0.25 + ((index * 7) % 12) / 16
+    }));
+
+    const input = { up: false, down: false, left: false, right: false, dashQueued: false };
+    const settings = {
+      muted: false,
+      reducedMotion: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      highContrast: false
+    };
+
+    let state = 'menu';
+    let level = null;
+    let player = null;
+    let particles = [];
+    let tip = '';
+    let tipTimer = 0;
+    let lastFrame = performance.now();
+    let globalTime = 0;
+    let shake = 0;
+    let hudElapsed = 0;
+    let audioContext = null;
+    let progress = loadProgress();
+    let modalPrimary = null;
+    let modalSecondary = null;
+
+    function theme() {
+      return settings.highContrast ? highContrastTheme : normalTheme;
+    }
+
+    function safeNumber(value, fallback) {
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function loadProgress() {
+      try {
+        const stored = JSON.parse(localStorage.getItem('lumen-run-progress') || '{}');
+        return {
+          unlocked: Math.max(1, Math.min(levels.length, safeNumber(stored.unlocked, 1))),
+          best: stored.best && typeof stored.best === 'object' ? stored.best : {}
+        };
+      } catch (_) {
+        return { unlocked: 1, best: {} };
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem('lumen-run-progress', JSON.stringify(progress));
+      } catch (_) {
+        // The game remains fully playable when browser storage is unavailable.
+      }
+    }
+
+    function validateMaps() {
+      levels.forEach((spec, levelIndex) => {
+        if (spec.map.length !== ROWS) throw new Error(`Stage ${levelIndex + 1} has the wrong row count.`);
+        spec.map.forEach((row, rowIndex) => {
+          if (row.length !== COLS) throw new Error(`Stage ${levelIndex + 1}, row ${rowIndex + 1} has ${row.length} columns, expected ${COLS}.`);
+        });
+      });
+    }
+
+    function centerOf(tx, ty) {
+      return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    }
+
+    function buildLevel(index) {
+      const spec = levels[index];
+      const tiles = spec.map.map((row) => row.split(''));
+      let spawn = null;
+      let exit = null;
+      let totalShards = 0;
+      tiles.forEach((row, y) => row.forEach((tile, x) => {
+        if (tile === '@') {
+          spawn = centerOf(x, y);
+          tiles[y][x] = '.';
+        }
+        if (tile === 'E') exit = centerOf(x, y);
+        if (tile === 'S') totalShards += 1;
+      }));
+      if (!spawn || !exit) throw new Error(`Stage ${index + 1} needs both a spawn and an exit.`);
+
+      const active = {
+        index,
+        spec,
+        tiles,
+        spawn,
+        checkpoint: { ...spawn },
+        exit,
+        totalShards,
+        collectedShards: 0,
+        elapsed: 0,
+        gateTimer: 0,
+        switchCooldown: 0,
+        messageCooldown: 0,
+        damageTaken: 0,
+        sentries: (spec.sentries || []).map((definition) => {
+          const a = { x: definition.a[0] * TILE, y: definition.a[1] * TILE };
+          const b = { x: definition.b[0] * TILE, y: definition.b[1] * TILE };
+          return { ...definition, a, b, x: a.x, y: a.y, angle: 0, alert: 0, sees: false };
+        })
+      };
+      return active;
+    }
+
+    function makePlayer(spawn, preserveLight) {
+      return {
+        x: spawn.x,
+        y: spawn.y,
+        radius: 15,
+        hp: preserveLight ? player.hp : 3,
+        lastDir: { x: 1, y: 0 },
+        dashDir: { x: 1, y: 0 },
+        dashTime: 0,
+        dashCooldown: 0,
+        invulnerable: 0,
+        trail: []
+      };
+    }
+
+    function startLevel(index) {
+      if (index < 0 || index >= levels.length || index + 1 > progress.unlocked) return;
+      clearInput();
+      level = buildLevel(index);
+      player = makePlayer(level.spawn, false);
+      particles = [];
+      tip = level.spec.subtitle;
+      tipTimer = 3.2;
+      shake = 0;
+      state = 'playing';
+      hideOverlay();
+      updateHud(true);
+      ensureAudio();
+      sound('start');
+      canvas.focus({ preventScroll: true });
+    }
+
+    function returnToMenu() {
+      clearInput();
+      if (!level) level = buildLevel(0);
+      player = makePlayer(level.spawn, false);
+      state = 'menu';
+      setOverlay({
+        kicker: 'A six-stage light expedition',
+        title: 'The vault has gone dark.',
+        copy: 'Collect every shard, outpace the security grid, and bring the last light home. Each completed stage unlocks the next.',
+        primary: 'Begin expedition',
+        onPrimary: () => startLevel(0),
+        showLevels: true
+      });
+      updateHud(true);
+    }
+
+    function pauseGame() {
+      if (state !== 'playing') return;
+      clearInput();
+      state = 'paused';
+      setOverlay({
+        kicker: `Stage ${level.index + 1} paused`,
+        title: 'Light held in suspension.',
+        copy: 'The vault waits. Resume whenever you are ready.',
+        primary: 'Resume',
+        onPrimary: resumeGame,
+        secondary: 'Restart stage',
+        onSecondary: () => startLevel(level.index)
+      });
+    }
+
+    function resumeGame() {
+      if (state !== 'paused') return;
+      state = 'playing';
+      hideOverlay();
+      canvas.focus({ preventScroll: true });
+    }
+
+    function completeLevel() {
+      if (state !== 'playing') return;
+      state = 'levelComplete';
+      const time = level.elapsed;
+      const stageKey = String(level.index + 1);
+      const previous = progress.best[stageKey];
+      if (!previous || time < previous.time) {
+        progress.best[stageKey] = { time, perfect: level.damageTaken === 0 };
+      } else if (level.damageTaken === 0) {
+        previous.perfect = true;
+      }
+      progress.unlocked = Math.max(progress.unlocked, Math.min(levels.length, level.index + 2));
+      saveProgress();
+      burst(player.x, player.y, 'portal', 54);
+      sound('complete');
+      const earned = ['Light clear'];
+      if (level.damageTaken === 0) earned.push('Perfect light');
+      if (time <= level.spec.par) earned.push('Speed light');
+      const last = level.index === levels.length - 1;
+      setOverlay({
+        kicker: last ? 'The vault remembers your name' : `Stage ${level.index + 1} restored`,
+        title: last ? 'The last light is home.' : `${level.spec.name} restored.`,
+        copy: last
+          ? `You crossed all six stages in ${formatTime(time)} for the finale. The nebula is lit again.`
+          : `Clear time ${formatTime(time)} · Par ${formatTime(level.spec.par)}. The next chamber is now awake.`,
+        primary: last ? 'Run the expedition again' : 'Enter next stage',
+        onPrimary: () => last ? startLevel(0) : startLevel(level.index + 1),
+        secondary: 'Stage select',
+        onSecondary: returnToMenu,
+        medals: earned
+      });
+      updateHud(true);
+    }
+
+    function setOverlay(options) {
+      modalKicker.textContent = options.kicker || '';
+      modalTitle.textContent = options.title || '';
+      modalCopy.textContent = options.copy || '';
+      primaryAction.textContent = options.primary || 'Continue';
+      modalPrimary = options.onPrimary || hideOverlay;
+      if (options.secondary) {
+        secondaryAction.hidden = false;
+        secondaryAction.textContent = options.secondary;
+        modalSecondary = options.onSecondary || hideOverlay;
+      } else {
+        secondaryAction.hidden = true;
+        modalSecondary = null;
+      }
+      if (options.medals && options.medals.length) {
+        medals.hidden = false;
+        medals.innerHTML = options.medals.map((medal) => `<span class="medal">✦ ${medal}</span>`).join('');
+      } else {
+        medals.hidden = true;
+        medals.innerHTML = '';
+      }
+      levelSelect.hidden = !options.showLevels;
+      if (options.showLevels) renderLevelSelect();
+      screenShade.classList.add('visible');
+    }
+
+    function hideOverlay() {
+      screenShade.classList.remove('visible');
+    }
+
+    function renderLevelSelect() {
+      levelSelect.innerHTML = levels.map((spec, index) => {
+        const unlocked = index + 1 <= progress.unlocked;
+        const best = progress.best[String(index + 1)];
+        const label = best ? `${formatTime(best.time)}${best.perfect ? ' · perfect' : ''}` : unlocked ? 'Ready' : 'Locked';
+        return `<button class="level-button" type="button" data-level="${index}" ${unlocked ? '' : 'disabled'}><strong>${String(index + 1).padStart(2, '0')} · ${spec.name}</strong><span>${label}</span></button>`;
+      }).join('');
+      levelSelect.querySelectorAll('[data-level]').forEach((button) => {
+        button.addEventListener('click', () => startLevel(Number(button.dataset.level)));
+      });
+    }
+
+    function clearInput() {
+      input.up = false;
+      input.down = false;
+      input.left = false;
+      input.right = false;
+      input.dashQueued = false;
+    }
+
+    function tileAt(tx, ty) {
+      if (!level || tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return '#';
+      return level.tiles[ty][tx];
+    }
+
+    function gateOpen() {
+      return level && level.gateTimer > 0;
+    }
+
+    function closedGateContainsCurrentPlayer(tx, ty) {
+      return circleRect(player.x, player.y, player.radius, tx * TILE, ty * TILE, TILE, TILE);
+    }
+
+    function solidTile(tx, ty, forVision = false) {
+      const tile = tileAt(tx, ty);
+      if (tile === '#') return true;
+      if (tile === 'G' && !gateOpen()) {
+        return forVision ? true : !closedGateContainsCurrentPlayer(tx, ty);
+      }
+      return false;
+    }
+
+    function circleRect(cx, cy, radius, rx, ry, rw, rh) {
+      const nearestX = Math.max(rx, Math.min(cx, rx + rw));
+      const nearestY = Math.max(ry, Math.min(cy, ry + rh));
+      const dx = cx - nearestX;
+      const dy = cy - nearestY;
+      return dx * dx + dy * dy < radius * radius;
+    }
+
+    function collidesWorld(x, y) {
+      const minX = Math.floor((x - player.radius) / TILE);
+      const maxX = Math.floor((x + player.radius) / TILE);
+      const minY = Math.floor((y - player.radius) / TILE);
+      const maxY = Math.floor((y + player.radius) / TILE);
+      for (let ty = minY; ty <= maxY; ty += 1) {
+        for (let tx = minX; tx <= maxX; tx += 1) {
+          if (solidTile(tx, ty) && circleRect(x, y, player.radius, tx * TILE, ty * TILE, TILE, TILE)) return true;
+        }
+      }
+      return false;
+    }
+
+    function movePlayer(dx, dy) {
+      const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 4));
+      const stepX = dx / steps;
+      const stepY = dy / steps;
+      for (let step = 0; step < steps; step += 1) {
+        const nextX = player.x + stepX;
+        if (!collidesWorld(nextX, player.y)) player.x = nextX;
+        const nextY = player.y + stepY;
+        if (!collidesWorld(player.x, nextY)) player.y = nextY;
+      }
+    }
+
+    function attemptDash() {
+      if (player.dashCooldown > 0 || player.dashTime > 0) return;
+      player.dashTime = .19;
+      player.dashCooldown = .82;
+      player.dashDir = { ...player.lastDir };
+      burst(player.x, player.y, 'cyan', settings.reducedMotion ? 5 : 14);
+      sound('dash');
+    }
+
+    function updatePlayer(dt) {
+      let horizontal = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      let vertical = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+      const length = Math.hypot(horizontal, vertical);
+      if (length > 0) {
+        horizontal /= length;
+        vertical /= length;
+        player.lastDir = { x: horizontal, y: vertical };
+      }
+      if (input.dashQueued) {
+        attemptDash();
+        input.dashQueued = false;
+      }
+      player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+      player.invulnerable = Math.max(0, player.invulnerable - dt);
+      if (player.dashTime > 0) {
+        player.dashTime = Math.max(0, player.dashTime - dt);
+        movePlayer(player.dashDir.x * 580 * dt, player.dashDir.y * 580 * dt);
+      } else if (length > 0) {
+        movePlayer(horizontal * 175 * dt, vertical * 175 * dt);
+      }
+      if (!settings.reducedMotion && (length > 0 || player.dashTime > 0)) {
+        player.trail.push({ x: player.x, y: player.y, age: 0, max: player.dashTime > 0 ? .32 : .18 });
+      }
+      player.trail.forEach((point) => { point.age += dt; });
+      player.trail = player.trail.filter((point) => point.age < point.max).slice(-18);
+    }
+
+    function laserState(tx, ty) {
+      if (gateOpen()) return 'off';
+      const phase = (level.elapsed + tx * .17 + ty * .29) % 2.45;
+      if (phase < 1.12) return 'active';
+      if (phase > 2.15) return 'warning';
+      return 'off';
+    }
+
+    function lineOfSight(x1, y1, x2, y2) {
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      const steps = Math.max(1, Math.ceil(distance / 10));
+      for (let step = 1; step < steps; step += 1) {
+        const x = x1 + (x2 - x1) * step / steps;
+        const y = y1 + (y2 - y1) * step / steps;
+        if (solidTile(Math.floor(x / TILE), Math.floor(y / TILE), true)) return false;
+      }
+      return true;
+    }
+
+    function updateSentries(dt) {
+      level.sentries.forEach((sentry) => {
+        const cycle = (Math.sin((level.elapsed * sentry.speed + sentry.offset) * Math.PI * 2) + 1) / 2;
+        const previousX = sentry.x;
+        const previousY = sentry.y;
+        sentry.x = sentry.a.x + (sentry.b.x - sentry.a.x) * cycle;
+        sentry.y = sentry.a.y + (sentry.b.y - sentry.a.y) * cycle;
+        const velocityX = sentry.x - previousX;
+        const velocityY = sentry.y - previousY;
+        if (Math.hypot(velocityX, velocityY) > .01) sentry.angle = Math.atan2(velocityY, velocityX);
+        const dx = player.x - sentry.x;
+        const dy = player.y - sentry.y;
+        const distance = Math.hypot(dx, dy);
+        const facing = Math.cos(sentry.angle) * dx + Math.sin(sentry.angle) * dy;
+        sentry.sees = distance < 220 && facing > distance * .48 && lineOfSight(sentry.x, sentry.y, player.x, player.y);
+        if (sentry.sees) {
+          sentry.alert = Math.min(1, sentry.alert + dt * (player.dashTime > 0 ? .25 : 1.35));
+        } else {
+          sentry.alert = Math.max(0, sentry.alert - dt * 1.8);
+        }
+        if (distance < 31 && player.dashTime <= 0) hit('Sentry contact');
+        if (sentry.alert >= .83) {
+          sentry.alert = 0;
+          hit('Sentry lock');
+        }
+      });
+    }
+
+    function updateHazardsAndObjectives() {
+      const minX = Math.floor((player.x - player.radius) / TILE);
+      const maxX = Math.floor((player.x + player.radius) / TILE);
+      const minY = Math.floor((player.y - player.radius) / TILE);
+      const maxY = Math.floor((player.y + player.radius) / TILE);
+      for (let ty = minY; ty <= maxY; ty += 1) {
+        for (let tx = minX; tx <= maxX; tx += 1) {
+          const tile = tileAt(tx, ty);
+          if (!circleRect(player.x, player.y, player.radius, tx * TILE, ty * TILE, TILE, TILE)) continue;
+          if (tile === '^') hit('Void spike');
+          if (tile === 'L' && laserState(tx, ty) === 'active') hit('Redline beam');
+          if (tile === 'S') collectShard(tx, ty);
+          if (tile === 'W') activateSwitch();
+          if (tile === 'C') activateCheckpoint(tx, ty);
+          if (tile === 'E') tryExit();
+        }
+      }
+    }
+
+    function collectShard(tx, ty) {
+      if (tileAt(tx, ty) !== 'S') return;
+      level.tiles[ty][tx] = '.';
+      level.collectedShards += 1;
+      burst(tx * TILE + TILE / 2, ty * TILE + TILE / 2, 'amber', 20);
+      sound('shard');
+      const remaining = level.totalShards - level.collectedShards;
+      setTip(remaining ? `${remaining} shard${remaining === 1 ? '' : 's'} remain.` : 'All shards aligned. The exit is primed.', 2.2);
+      updateHud(true);
+    }
+
+    function activateSwitch() {
+      if (level.switchCooldown > 0) return;
+      level.gateTimer = 5.4;
+      level.switchCooldown = 1.0;
+      burst(player.x, player.y, 'amber', 18);
+      sound('switch');
+      setTip('Gate opened. Redline grid cooling for 5 seconds.', 2.8);
+    }
+
+    function activateCheckpoint(tx, ty) {
+      const point = centerOf(tx, ty);
+      if (Math.hypot(point.x - level.checkpoint.x, point.y - level.checkpoint.y) < 3) return;
+      level.checkpoint = point;
+      burst(point.x, point.y, 'green', 18);
+      sound('checkpoint');
+      setTip('Crystal attuned. This is now your return point.', 2.6);
+    }
+
+    function tryExit() {
+      if (level.collectedShards === level.totalShards) {
+        completeLevel();
+      } else if (level.messageCooldown <= 0) {
+        const remain = level.totalShards - level.collectedShards;
+        setTip(`Exit sealed — recover ${remain} more shard${remain === 1 ? '' : 's'}.`, 2.2);
+        level.messageCooldown = 1.6;
+        sound('sealed');
+      }
+    }
+
+    function respawn() {
+      const currentHp = player.hp;
+      player = makePlayer(level.checkpoint, true);
+      player.hp = currentHp;
+      player.invulnerable = 1.15;
+      burst(player.x, player.y, 'violet', 24);
+      updateHud(true);
+    }
+
+    function hit(reason) {
+      if (state !== 'playing' || player.invulnerable > 0 || player.dashTime > 0) return;
+      player.hp -= 1;
+      player.invulnerable = 1.1;
+      level.damageTaken += 1;
+      shake = settings.reducedMotion ? 0 : .34;
+      burst(player.x, player.y, 'danger', 28);
+      sound('hurt');
+      if (player.hp <= 0) {
+        player.hp = 3;
+        level.checkpoint = { ...level.spawn };
+        setTip(`${reason}. Light reformed at the chamber entrance.`, 2.5);
+      } else {
+        setTip(`${reason}. Returning to your attuned crystal.`, 2.4);
+      }
+      respawn();
+    }
+
+    function updateParticles(dt) {
+      particles.forEach((particle) => {
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.vx *= 1 - dt * 2.6;
+        particle.vy *= 1 - dt * 2.6;
+        particle.life -= dt;
+      });
+      particles = particles.filter((particle) => particle.life > 0);
+    }
+
+    function burst(x, y, color, amount) {
+      if (settings.reducedMotion && amount > 10) amount = Math.ceil(amount / 4);
+      for (let i = 0; i < amount; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 25 + Math.random() * 150;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: .3 + Math.random() * .48,
+          max: .78,
+          size: 1.5 + Math.random() * 3.1,
+          color
+        });
+      }
+    }
+
+    function setTip(message, duration = 2) {
+      tip = message;
+      tipTimer = duration;
+    }
+
+    function update(dt) {
+      level.elapsed += dt;
+      level.gateTimer = Math.max(0, level.gateTimer - dt);
+      level.switchCooldown = Math.max(0, level.switchCooldown - dt);
+      level.messageCooldown = Math.max(0, level.messageCooldown - dt);
+      tipTimer = Math.max(0, tipTimer - dt);
+      shake = Math.max(0, shake - dt * 1.8);
+      updatePlayer(dt);
+      updateSentries(dt);
+      updateHazardsAndObjectives();
+      updateParticles(dt);
+      hudElapsed += dt;
+      if (hudElapsed > .08) {
+        updateHud();
+        hudElapsed = 0;
+      }
+    }
+
+    function updateHud(force = false) {
+      if (!level || !player) return;
+      stageLabel.textContent = `Stage ${level.index + 1} of ${levels.length}`;
+      stageName.textContent = level.spec.name;
+      shardText.textContent = `${level.collectedShards} / ${level.totalShards}`;
+      const remaining = level.totalShards - level.collectedShards;
+      objectiveText.textContent = remaining
+        ? `Recover ${remaining} light shard${remaining === 1 ? '' : 's'}, then reach the portal.`
+        : 'Exit primed — cross the violet portal.';
+      timeText.textContent = formatTime(level.elapsed);
+      dashFill.style.width = `${Math.max(0, Math.min(100, (1 - player.dashCooldown / .82) * 100))}%`;
+      lightPips.innerHTML = Array.from({ length: 3 }, (_, index) => `<span class="pip ${index < player.hp ? '' : 'off'}" aria-hidden="true"></span>`).join('');
+      if (force) renderLevelSelect();
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainder = seconds - minutes * 60;
+      return `${minutes}:${remainder.toFixed(1).padStart(4, '0')}`;
+    }
+
+    function particleColor(name, colors) {
+      return ({ cyan: colors.cyan, violet: colors.violet, amber: colors.amber, danger: colors.danger, green: colors.green, portal: colors.portal })[name] || colors.cyan;
+    }
+
+    function drawBackground(colors) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, LOGICAL_HEIGHT);
+      gradient.addColorStop(0, colors.skyTop);
+      gradient.addColorStop(1, colors.skyBottom);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+      const nebula = ctx.createRadialGradient(LOGICAL_WIDTH * .74, LOGICAL_HEIGHT * .18, 10, LOGICAL_WIDTH * .74, LOGICAL_HEIGHT * .18, 430);
+      nebula.addColorStop(0, `${colors.nebula}99`);
+      nebula.addColorStop(1, `${colors.nebula}00`);
+      ctx.fillStyle = nebula;
+      ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+      stars.forEach((star) => {
+        const twinkle = settings.reducedMotion ? .65 : .36 + .44 * (Math.sin(globalTime * star.drift + star.phase) + 1) / 2;
+        ctx.globalAlpha = twinkle;
+        ctx.fillStyle = colors.stars;
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawFloor(colors) {
+      for (let y = 0; y < ROWS; y += 1) {
+        for (let x = 0; x < COLS; x += 1) {
+          const px = x * TILE;
+          const py = y * TILE;
+          ctx.fillStyle = colors.floor;
+          ctx.fillRect(px, py, TILE, TILE);
+          ctx.fillStyle = 'rgba(0,0,0,.11)';
+          ctx.fillRect(px, py + TILE - 2, TILE, 2);
+          ctx.strokeStyle = colors.floorLine;
+          ctx.globalAlpha = .22;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + .5, py + .5, TILE - 1, TILE - 1);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    function drawWall(tx, ty, colors) {
+      const x = tx * TILE;
+      const y = ty * TILE;
+      const gradient = ctx.createLinearGradient(x, y, x + TILE, y + TILE);
+      gradient.addColorStop(0, colors.wall);
+      gradient.addColorStop(1, colors.wallShade);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.strokeStyle = colors.wallEdge;
+      ctx.globalAlpha = .58;
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(x + 2.5, y + 2.5, TILE - 5, TILE - 5);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,.05)';
+      ctx.fillRect(x + 6, y + 7, TILE - 12, 2);
+      ctx.fillRect(x + 7, y + 7, 2, TILE - 14);
+      ctx.fillStyle = 'rgba(0,0,0,.2)';
+      ctx.fillRect(x + 5, y + TILE - 8, TILE - 10, 3);
+    }
+
+    function drawGate(tx, ty, colors) {
+      const x = tx * TILE;
+      const y = ty * TILE;
+      const open = gateOpen();
+      ctx.save();
+      ctx.strokeStyle = open ? colors.green : colors.amber;
+      ctx.fillStyle = open ? `${colors.green}20` : `${colors.amber}42`;
+      ctx.shadowColor = open ? colors.green : colors.amber;
+      ctx.shadowBlur = open ? 18 : 9;
+      if (!open) {
+        ctx.fillRect(x + 10, y + 5, TILE - 20, TILE - 10);
+        for (let strip = 0; strip < 4; strip += 1) {
+          ctx.fillStyle = strip % 2 ? `${colors.amber}44` : `${colors.amber}88`;
+          ctx.fillRect(x + 12 + strip * 10, y + 8, 5, TILE - 16);
+        }
+      }
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 9, y + 5, TILE - 18, TILE - 10);
+      ctx.restore();
+    }
+
+    function drawShard(tx, ty, colors) {
+      const x = tx * TILE + TILE / 2;
+      const y = ty * TILE + TILE / 2;
+      const pulse = settings.reducedMotion ? 1 : 1 + Math.sin(globalTime * 4 + tx * .4 + ty) * .1;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(pulse, pulse);
+      ctx.fillStyle = colors.amber;
+      ctx.shadowColor = colors.amber;
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.moveTo(0, -15);
+      ctx.lineTo(10, 0);
+      ctx.lineTo(0, 15);
+      ctx.lineTo(-10, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fff5cf';
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(5, 0);
+      ctx.lineTo(0, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSpike(tx, ty, colors) {
+      const x = tx * TILE;
+      const y = ty * TILE;
+      ctx.save();
+      ctx.fillStyle = colors.dangerDark;
+      ctx.fillRect(x, y + TILE - 11, TILE, 11);
+      ctx.fillStyle = colors.danger;
+      ctx.shadowColor = colors.danger;
+      ctx.shadowBlur = 9;
+      for (let spike = 0; spike < 4; spike += 1) {
+        ctx.beginPath();
+        ctx.moveTo(x + spike * 15 + 1, y + TILE - 10);
+        ctx.lineTo(x + spike * 15 + 7.5, y + 13);
+        ctx.lineTo(x + spike * 15 + 14, y + TILE - 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawLaser(tx, ty, colors) {
+      const x = tx * TILE;
+      const y = ty * TILE;
+      const status = laserState(tx, ty);
+      const active = status === 'active';
+      const warning = status === 'warning';
+      ctx.save();
+      ctx.strokeStyle = active ? colors.danger : warning ? colors.amber : `${colors.danger}55`;
+      ctx.lineWidth = active ? 5 : 2;
+      ctx.shadowColor = active ? colors.danger : colors.amber;
+      ctx.shadowBlur = active ? 18 : warning ? 7 : 0;
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + TILE / 2);
+      ctx.lineTo(x + TILE - 6, y + TILE / 2);
+      ctx.stroke();
+      ctx.fillStyle = active ? colors.danger : colors.dangerDark;
+      ctx.fillRect(x + 3, y + 8, 5, TILE - 16);
+      ctx.fillRect(x + TILE - 8, y + 8, 5, TILE - 16);
+      ctx.restore();
+    }
+
+    function drawSwitch(tx, ty, colors) {
+      const x = tx * TILE + TILE / 2;
+      const y = ty * TILE + TILE / 2;
+      const active = gateOpen();
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = active ? colors.green : colors.amber;
+      ctx.shadowColor = active ? colors.green : colors.amber;
+      ctx.shadowBlur = active ? 20 : 11;
+      ctx.fillRect(-15, -8, 30, 16);
+      ctx.fillStyle = colors.black;
+      ctx.fillRect(-9, -3, 18, 6);
+      ctx.restore();
+    }
+
+    function drawCrystal(tx, ty, colors) {
+      const x = tx * TILE + TILE / 2;
+      const y = ty * TILE + TILE / 2;
+      const active = Math.hypot(level.checkpoint.x - x, level.checkpoint.y - y) < 3;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = active ? colors.green : colors.violet;
+      ctx.shadowColor = active ? colors.green : colors.violet;
+      ctx.shadowBlur = active ? 20 : 10;
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(10, 0);
+      ctx.lineTo(0, 18);
+      ctx.lineTo(-10, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawExit(tx, ty, colors) {
+      const x = tx * TILE + TILE / 2;
+      const y = ty * TILE + TILE / 2;
+      const ready = level.collectedShards === level.totalShards;
+      const size = ready ? 21 + (settings.reducedMotion ? 0 : Math.sin(globalTime * 4) * 2) : 17;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = ready ? colors.portal : `${colors.muted}66`;
+      ctx.shadowColor = ready ? colors.portal : colors.muted;
+      ctx.shadowBlur = ready ? 25 : 3;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * .67, size, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      if (ready) {
+        ctx.globalAlpha = .5;
+        ctx.strokeStyle = colors.cyan;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * .28, size * .72, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSentries(colors) {
+      level.sentries.forEach((sentry) => {
+        ctx.save();
+        ctx.translate(sentry.x, sentry.y);
+        ctx.rotate(sentry.angle);
+        ctx.fillStyle = sentry.sees ? `${colors.danger}32` : `${colors.danger}17`;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 215, -.53, .53);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(sentry.x, sentry.y);
+        ctx.fillStyle = colors.dangerDark;
+        ctx.strokeStyle = colors.danger;
+        ctx.shadowColor = colors.danger;
+        ctx.shadowBlur = 12 + sentry.alert * 16;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fff1f5';
+        ctx.beginPath();
+        ctx.arc(0, 0, 5 + sentry.alert * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function drawParticles(colors) {
+      particles.forEach((particle) => {
+        const alpha = Math.max(0, Math.min(1, particle.life / particle.max));
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = particleColor(particle.color, colors);
+        ctx.fillRect(particle.x - particle.size / 2, particle.y - particle.size / 2, particle.size, particle.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawPlayer(colors) {
+      player.trail.forEach((point) => {
+        const alpha = Math.max(0, 1 - point.age / point.max) * .42;
+        ctx.fillStyle = colors.cyan;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, player.radius * alpha * 1.15, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      const blink = player.invulnerable > 0 && Math.floor(globalTime * 13) % 2 === 0;
+      if (blink) ctx.globalAlpha = .42;
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      const radial = ctx.createRadialGradient(-5, -7, 2, 0, 0, 26);
+      radial.addColorStop(0, '#ffffff');
+      radial.addColorStop(.28, colors.cyan);
+      radial.addColorStop(1, `${colors.cyan}18`);
+      ctx.fillStyle = radial;
+      ctx.shadowColor = colors.cyan;
+      ctx.shadowBlur = player.dashTime > 0 ? 32 : 20;
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = colors.violet;
+      ctx.globalAlpha = .85;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius + 4, globalTime * 2, globalTime * 2 + Math.PI * 1.3);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    function drawTip(colors) {
+      if (!tip || tipTimer <= 0 || state === 'menu') return;
+      const alpha = Math.min(1, tipTimer * 1.8);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = '600 14px system-ui, sans-serif';
+      const width = Math.min(650, ctx.measureText(tip).width + 40);
+      const x = (LOGICAL_WIDTH - width) / 2;
+      const y = LOGICAL_HEIGHT - 43;
+      ctx.fillStyle = 'rgba(3, 10, 25, .86)';
+      ctx.strokeStyle = `${colors.cyan}77`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, 28, 14);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = colors.text;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tip, LOGICAL_WIDTH / 2, y + 14);
+      ctx.restore();
+    }
+
+    function render() {
+      const colors = theme();
+      ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+      drawBackground(colors);
+      if (!level || !player) return;
+      ctx.save();
+      if (shake > 0) {
+        const amount = shake * 9;
+        ctx.translate((Math.random() - .5) * amount, (Math.random() - .5) * amount);
+      }
+      drawFloor(colors);
+      for (let y = 0; y < ROWS; y += 1) {
+        for (let x = 0; x < COLS; x += 1) {
+          const tile = tileAt(x, y);
+          if (tile === '#') drawWall(x, y, colors);
+          if (tile === 'G') drawGate(x, y, colors);
+          if (tile === 'S') drawShard(x, y, colors);
+          if (tile === '^') drawSpike(x, y, colors);
+          if (tile === 'L') drawLaser(x, y, colors);
+          if (tile === 'W') drawSwitch(x, y, colors);
+          if (tile === 'C') drawCrystal(x, y, colors);
+          if (tile === 'E') drawExit(x, y, colors);
+        }
+      }
+      drawSentries(colors);
+      drawParticles(colors);
+      drawPlayer(colors);
+      ctx.restore();
+      drawTip(colors);
+    }
+
+    function resizeCanvas() {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(LOGICAL_WIDTH * ratio);
+      canvas.height = Math.round(LOGICAL_HEIGHT * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function ensureAudio() {
+      if (settings.muted) return;
+      try {
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume();
+      } catch (_) {
+        audioContext = null;
+      }
+    }
+
+    function sound(kind) {
+      if (settings.muted || !audioContext) return;
+      const presets = {
+        start: [320, .08, 'sine', .03], dash: [670, .05, 'square', .025], shard: [880, .09, 'sine', .04],
+        switch: [460, .12, 'triangle', .035], checkpoint: [580, .14, 'sine', .035], hurt: [130, .16, 'sawtooth', .05],
+        sealed: [170, .09, 'square', .03], complete: [740, .2, 'sine', .05]
+      };
+      const preset = presets[kind];
+      if (!preset) return;
+      try {
+        const [frequency, duration, type, volume] = preset;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(volume, audioContext.currentTime + .01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration + .02);
+      } catch (_) {
+        // Sound is optional; a missing audio feature never blocks play.
+      }
+    }
+
+    function setControl(control, pressed) {
+      if (state !== 'playing') return;
+      if (control === 'dash' && pressed) input.dashQueued = true;
+      if (control in input && control !== 'dashQueued') input[control] = pressed;
+    }
+
+    function handleKeyDown(event) {
+      const key = event.key.toLowerCase();
+      const map = { arrowup: 'up', w: 'up', arrowdown: 'down', s: 'down', arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right' };
+      if (key in map) {
+        if (state === 'playing') event.preventDefault();
+        setControl(map[key], true);
+        ensureAudio();
+        return;
+      }
+      if (key === ' ' || key === 'shift' || key === 'x') {
+        if (state === 'playing') event.preventDefault();
+        if (!event.repeat) setControl('dash', true);
+        ensureAudio();
+        return;
+      }
+      if ((key === 'p' || key === 'escape') && !event.repeat) {
+        if (state === 'playing') pauseGame();
+        else if (state === 'paused') resumeGame();
+        return;
+      }
+      if (key === 'r' && !event.repeat && (state === 'playing' || state === 'paused')) {
+        startLevel(level.index);
+      }
+    }
+
+    function handleKeyUp(event) {
+      const key = event.key.toLowerCase();
+      const map = { arrowup: 'up', w: 'up', arrowdown: 'down', s: 'down', arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right' };
+      if (key in map) {
+        if (state === 'playing') event.preventDefault();
+        input[map[key]] = false;
+      }
+    }
+
+    function tick(now) {
+      const dt = Math.min(.034, Math.max(0, (now - lastFrame) / 1000));
+      lastFrame = now;
+      globalTime += dt;
+      if (state === 'playing') update(dt);
+      render();
+      requestAnimationFrame(tick);
+    }
+
+    primaryAction.addEventListener('click', () => {
+      ensureAudio();
+      if (modalPrimary) modalPrimary();
+    });
+    secondaryAction.addEventListener('click', () => {
+      ensureAudio();
+      if (modalSecondary) modalSecondary();
+    });
+
+    document.querySelectorAll('[data-control]').forEach((button) => {
+      const control = button.dataset.control;
+      const release = (event) => {
+        event.preventDefault();
+        setControl(control, false);
+      };
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        button.setPointerCapture?.(event.pointerId);
+        ensureAudio();
+        setControl(control, true);
+      });
+      button.addEventListener('pointerup', release);
+      button.addEventListener('pointercancel', release);
+      button.addEventListener('lostpointercapture', release);
+      button.addEventListener('pointerleave', (event) => { if (event.buttons) release(event); });
+    });
+
+    soundButton.addEventListener('click', () => {
+      settings.muted = !settings.muted;
+      soundButton.textContent = `Sound: ${settings.muted ? 'Off' : 'On'}`;
+      soundButton.setAttribute('aria-pressed', String(settings.muted));
+      if (!settings.muted) {
+        ensureAudio();
+        sound('start');
+      }
+    });
+
+    motionButton.addEventListener('click', () => {
+      settings.reducedMotion = !settings.reducedMotion;
+      document.body.classList.toggle('reduced-motion', settings.reducedMotion);
+      motionButton.textContent = `Motion: ${settings.reducedMotion ? 'Reduced' : 'Full'}`;
+      motionButton.setAttribute('aria-pressed', String(settings.reducedMotion));
+      if (settings.reducedMotion) player.trail = [];
+    });
+
+    contrastButton.addEventListener('click', () => {
+      settings.highContrast = !settings.highContrast;
+      document.body.classList.toggle('high-contrast', settings.highContrast);
+      contrastButton.textContent = `Contrast: ${settings.highContrast ? 'High' : 'Standard'}`;
+      contrastButton.setAttribute('aria-pressed', String(settings.highContrast));
+    });
+
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    window.addEventListener('keyup', handleKeyUp, { passive: false });
+    window.addEventListener('blur', () => {
+      clearInput();
+      if (state === 'playing') pauseGame();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInput();
+        if (state === 'playing') pauseGame();
+      }
+    });
+    window.addEventListener('resize', resizeCanvas);
+    canvas.addEventListener('pointerdown', ensureAudio);
+
+    validateMaps();
+    document.body.classList.toggle('reduced-motion', settings.reducedMotion);
+    resizeCanvas();
+    level = buildLevel(0);
+    player = makePlayer(level.spawn, false);
+    returnToMenu();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>
